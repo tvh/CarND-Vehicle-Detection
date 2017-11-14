@@ -16,9 +16,9 @@ def extract_features(img, x0, y0, x1, y1):
     img = cv2.resize(img, (64, 64))
     yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
     y, u, v = cv2.split(img)
-    y_hog = hog(y, orientations=10, pixels_per_cell=(16, 16), cells_per_block=(2, 2))
-    u_hog = hog(u, orientations=10, pixels_per_cell=(16, 16), cells_per_block=(2, 2))
-    v_hog = hog(v, orientations=10, pixels_per_cell=(16, 16), cells_per_block=(2, 2))
+    y_hog = hog(y, orientations=11, pixels_per_cell=(16, 16), cells_per_block=(2, 2))
+    u_hog = hog(u, orientations=11, pixels_per_cell=(16, 16), cells_per_block=(2, 2))
+    v_hog = hog(v, orientations=11, pixels_per_cell=(16, 16), cells_per_block=(2, 2))
     res = np.concatenate([y_hog, u_hog, v_hog])
     return res
 
@@ -48,7 +48,7 @@ def annotate_image(clf, img):
                 if res:
                     found_matches.append([x0,y0,x1,y1])
                 y0 = y0+s//2
-            x0 = x0+s//2
+            x0 = x0+s//4
             x1 = x0+s
     img = draw_boxes(img, found_matches)
     return img
