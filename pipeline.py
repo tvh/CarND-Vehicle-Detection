@@ -11,14 +11,16 @@ import math
 IMG_X = 1280
 IMG_Y = 720
 
-def extract_features(img, scaler, x0, y0, x1, y1):
+def extract_features(img, x0, y0, x1, y1):
     img = img[y0:y1, x0:x1]
     img = cv2.resize(img, (64, 64))
-    hls = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
-    h, l, s = cv2.split(img)
-    l_hog = hog(l, orientations=8, pixels_per_cell=(8, 8), cells_per_block=(1, 1))
-    s_hog = hog(l, orientations=8, pixels_per_cell=(8, 8), cells_per_block=(1, 1))
-    return scaler.transform([np.concatenate([l_hog, s_hog])])[0]
+    yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
+    y, u, v = cv2.split(img)
+    y_hog = hog(y, orientations=10, pixels_per_cell=(16, 16), cells_per_block=(2, 2))
+    u_hog = hog(u, orientations=10, pixels_per_cell=(16, 16), cells_per_block=(2, 2))
+    v_hog = hog(v, orientations=10, pixels_per_cell=(16, 16), cells_per_block=(2, 2))
+    res = np.concatenate([y_hog, u_hog, v_hog])
+    return res
 
 def draw_boxes(img, bboxes, color=(0, 0, 255), thick=6):
     # Make a copy of the image
@@ -30,20 +32,24 @@ def draw_boxes(img, bboxes, color=(0, 0, 255), thick=6):
     # Return the image copy with boxes drawn
     return imcopy
 
-def annotate_image(clf, scaler, img):
+def annotate_image(clf, img):
     found_matches = []
-    sizes = [64,96,128,192]
+    sizes = [64,96,128,196]
     for s in sizes:
-        for i in range(math.floor(IMG_X/s-1)*2):
-            for j in range(math.floor(IMG_Y/s-1)*2):
-                x0 = math.floor(s/2*i)
-                x1 = x0+s
-                y0 = math.floor(s/2*j)
+        x0 = 0
+        x1 = s
+        while x1<=IMG_X:
+            # We don't care about the upper half
+            y0 = IMG_Y//2
+            while y0+s<=IMG_Y:
                 y1 = y0+s
-                features = extract_features(img, scaler, x0, y0, x1, y1)
+                features = extract_features(img, x0, y0, x1, y1)
                 res = clf.predict([features])
                 if res:
                     found_matches.append([x0,y0,x1,y1])
+                y0 = y0+s//2
+            x0 = x0+s//2
+            x1 = x0+s
     img = draw_boxes(img, found_matches)
     return img
 
@@ -51,12 +57,12 @@ def output_test_images():
     '''
     Process the test images and write out the result.
     '''
-    clf, scaler = joblib.load('classifier.pkl')
+    clf = joblib.load('classifier.pkl')
     test_images = glob.glob('test_images/*.jpg')
     for img_file in test_images:
         print("Processing: ", img_file)
         img = cv2.imread(img_file)
-        img = annotate_image(clf, scaler, img)
+        img = annotate_image(clf, img)
         cv2.imwrite('output_images/'+os.path.basename(img_file), img)
 
 def main():
