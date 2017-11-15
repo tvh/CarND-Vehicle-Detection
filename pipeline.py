@@ -1,13 +1,14 @@
-import numpy as np
+from moviepy.editor import VideoFileClip
+from scipy.ndimage.measurements import label
+from skimage.feature import hog
+from sklearn.externals import joblib
+import argparse
 import cv2
 import glob
-import pickle
-import os
-import argparse
-from sklearn.externals import joblib
-from skimage.feature import hog
 import math
-from scipy.ndimage.measurements import label
+import numpy as np
+import os
+import pickle
 
 IMG_X = 1280
 IMG_Y = 720
@@ -54,9 +55,9 @@ def draw_labeled_bboxes(img, labels):
     # Return the image
     return img
 
-def annotate_image(clf, img):
+def annotate_image(clf, img, prev_heats=[], threshold=4, return_heat=False):
     found_matches = []
-    sizes = [64,96,128,196]
+    sizes = [64,96,128,192,256]
     for s in sizes:
         x0 = 0
         x1 = s
@@ -69,16 +70,41 @@ def annotate_image(clf, img):
                 res = clf.predict([features])
                 if res:
                     found_matches.append([[x0,y0],[x1,y1]])
-                y0 = y0+s//2
-            x0 = x0+s//4
+                y0 = y0+s//3
+            x0 = x0+s//3
             x1 = x0+s
     heat = np.zeros_like(img[:,:,0]).astype(np.float)
     add_heat(heat,found_matches)
-    heat = apply_threshold(heat,2)
-    heatmap = np.clip(heat, 0, 255)
+    summed_heat = heat.copy()
+    for h in prev_heats:
+        summed_heat += h
+    thresholded_heat = apply_threshold(summed_heat,threshold)
+    heatmap = np.clip(thresholded_heat, 0, 255)
     labels = label(heatmap)
     draw_img = draw_labeled_bboxes(np.copy(img), labels)
-    return draw_img
+    if return_heat:
+        return draw_img, heat
+    else:
+        return draw_img
+
+def annotate_video(src, dst):
+    clf = joblib.load('classifier.pkl')
+    prev_heats = []
+    def process_image(img):
+        nonlocal prev_heats
+        # The pipeline works on BGR images
+        color_corrected = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        result, heat = annotate_image(
+            clf, color_corrected,
+            prev_heats=prev_heats,
+            return_heat=True,
+            threshold=(len(prev_heats)+1)*6)
+        prev_heats.append(heat)
+        prev_heats = prev_heats[-3:]
+        return cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
+    clip_in = VideoFileClip(src)
+    clip_out = clip_in.fl_image(process_image)
+    clip_out.write_videofile(dst, audio=False)
 
 def output_test_images():
     '''
@@ -97,11 +123,17 @@ def main():
     subparsers = parser.add_subparsers(dest="cmd")
     subparsers.required = True
     output_test_parser = subparsers.add_parser('output-test-images')
+    ann_vid_parser = subparsers.add_parser('annotate-video')
+    ann_vid_parser.add_argument('--src', type=str, help="source file", required=True)
+    ann_vid_parser.add_argument('--dst', type=str, help="target file", required=True)
     args = parser.parse_args()
 
     if args.cmd=="output-test-images":
         print("Generating annotated test images")
         output_test_images()
+    elif args.cmd=='annotate-video':
+        print("Annotating Video")
+        annotate_video(args.src, args.dst)
 
 if __name__ == '__main__':
     main()
