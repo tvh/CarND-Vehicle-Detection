@@ -17,10 +17,10 @@ def extract_features(img, x0, y0, x1, y1):
     img = img[y0:y1, x0:x1]
     img = cv2.resize(img, (64, 64))
     yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
-    y, u, v = cv2.split(img)
-    y_hog = hog(y, orientations=11, pixels_per_cell=(16, 16), cells_per_block=(2, 2))
-    u_hog = hog(u, orientations=11, pixels_per_cell=(16, 16), cells_per_block=(2, 2))
-    v_hog = hog(v, orientations=11, pixels_per_cell=(16, 16), cells_per_block=(2, 2))
+    y, u, v = cv2.split(yuv)
+    y_hog = hog(y, orientations=9, pixels_per_cell=(16, 16), cells_per_block=(2, 2))
+    u_hog = hog(u, orientations=9, pixels_per_cell=(16, 16), cells_per_block=(2, 2))
+    v_hog = hog(v, orientations=9, pixels_per_cell=(16, 16), cells_per_block=(2, 2))
     res = np.concatenate([y_hog, u_hog, v_hog])
     return res
 
@@ -55,9 +55,9 @@ def draw_labeled_bboxes(img, labels):
     # Return the image
     return img
 
-def annotate_image(clf, img, prev_heats=[], threshold=4, return_heat=False):
+def annotate_image(clf, img, prev_heats=[], threshold=3, return_heat=False):
     found_matches = []
-    sizes = [64,96,128,192,256]
+    sizes = [64,96,128,192]
     for s in sizes:
         x0 = 0
         x1 = s
@@ -70,8 +70,8 @@ def annotate_image(clf, img, prev_heats=[], threshold=4, return_heat=False):
                 res = clf.predict([features])
                 if res:
                     found_matches.append([[x0,y0],[x1,y1]])
-                y0 = y0+s//3
-            x0 = x0+s//3
+                y0 = y0+s//4
+            x0 = x0+s//4
             x1 = x0+s
     heat = np.zeros_like(img[:,:,0]).astype(np.float)
     add_heat(heat,found_matches)
@@ -98,9 +98,9 @@ def annotate_video(src, dst):
             clf, color_corrected,
             prev_heats=prev_heats,
             return_heat=True,
-            threshold=(len(prev_heats)+1)*6)
+            threshold=(len(prev_heats)+1)*3)
         prev_heats.append(heat)
-        prev_heats = prev_heats[-3:]
+        prev_heats = prev_heats[-10:]
         return cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
     clip_in = VideoFileClip(src)
     clip_out = clip_in.fl_image(process_image)
