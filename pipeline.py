@@ -87,7 +87,7 @@ def annotate_image(clf, img, prev_heats=[], threshold=3, return_heat=False):
     else:
         return draw_img
 
-def annotate_video(src, dst):
+def annotate_video(src, dst, use_prev_n_heats=6, threshold=4):
     clf = joblib.load('classifier.pkl')
     prev_heats = []
     def process_image(img):
@@ -98,9 +98,9 @@ def annotate_video(src, dst):
             clf, color_corrected,
             prev_heats=prev_heats,
             return_heat=True,
-            threshold=(len(prev_heats)+1)*3)
+            threshold=(len(prev_heats)+1)*threshold)
         prev_heats.append(heat)
-        prev_heats = prev_heats[-10:]
+        prev_heats = prev_heats[-use_prev_n_heats:]
         return cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
     clip_in = VideoFileClip(src)
     clip_out = clip_in.fl_image(process_image)
