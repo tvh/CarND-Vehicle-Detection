@@ -44,7 +44,11 @@ I tried using less of an overlap, but wasn't getting a good result from it.
 Before tackling the video I tested my pipeline on the provided test images.
 The results are saved to `output_images`.
 
-TODO
+In the first iteration the classifier hat lots of false positives.
+This was with a `LinearSVC` and a coarser search pattern.
+To mitigate this, I increased the overlap to 75% and used a `GradientBoostingClassifier`.
+
+To exclude the false positives, I only consider those regions which have more than 2 overlapping matches.
 
 ### Video Implementation
 
@@ -53,8 +57,23 @@ Here's a [link to my video result](./project_out.mp4)
 
 #### 2. Describe how (and identify where in your code) you implemented some kind of filter for false positives and some method for combining overlapping bounding boxes.
 
-TODO
+Like in the implementation for single images, I only consider regions which have multiple overlapping matches.
+In addition to this I also use the heatmaps from multiple consecutive images to get the final heatmap.
+
+The code for this part is in `annotate_video`.
 
 ### Discussion
 
-TODO
+Using the sliding window approach I found it quite hard to get accurate bounding boxes. 
+The classifier might detect (correctly) that the window contains a car, but the car is not centered, the bounding box can easily get too large.
+On the other hand you need to have a very fine search pattern to identify far away cars correctly.
+
+Using this approach it is also almost impossible to seperate 2 overlapping bounding boxes.
+This happens in the project video where the white car gets overtaken by the black car.
+One could use color in this case to seperate them out, but this doesn't generalise well.
+
+Another drawback of this approach is performance.
+Using a sliding window approach is inherently slow and there is always the tradeoff between speed and accuracy.
+I could have also made more of the computation shared (scaling, extracting hog features), but it would still be hard to get realtime performance.
+
+If done again, I think I would use a SSD instead.
