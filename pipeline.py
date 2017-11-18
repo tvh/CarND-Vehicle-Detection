@@ -13,9 +13,10 @@ import pickle
 IMG_X = 1280
 IMG_Y = 720
 
-def extract_features(img, x0, y0, x1, y1):
-    img = img[y0:y1, x0:x1]
-    img = cv2.resize(img, (64, 64))
+def prepare(img):
+    """
+    Extract the hog parameters from a scaled image.
+    """
     yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
     y, u, v = cv2.split(yuv)
     y_hog = hog(y, orientations=9, pixels_per_cell=(16, 16), cells_per_block=(2, 2))
@@ -24,7 +25,18 @@ def extract_features(img, x0, y0, x1, y1):
     res = np.concatenate([y_hog, u_hog, v_hog])
     return res
 
+def extract_features(img, x0, y0, x1, y1):
+    """
+    Extract the hog features by cropping and resizing first
+    """
+    img = img[y0:y1, x0:x1]
+    img = cv2.resize(img, (64, 64))
+    return prepare(img)
+
 def add_heat(heatmap, bbox_list):
+    """
+    Adding up a list of bounding boxes to a heatmap
+    """
     # Iterate through list of bboxes
     for box in bbox_list:
         # Add += 1 for all pixels inside each bbox
@@ -35,12 +47,18 @@ def add_heat(heatmap, bbox_list):
     return heatmap
 
 def apply_threshold(heatmap, threshold):
+    """
+    Applying a threshold to the heatmap to filter out outliers
+    """
     # Zero out pixels below the threshold
     heatmap[heatmap <= threshold] = 0
     # Return thresholded map
     return heatmap
 
 def draw_labeled_bboxes(img, labels):
+    """
+    Overlay labeled boxes onto an image.
+    """
     # Iterate through all detected cars
     for car_number in range(1, labels[1]+1):
         # Find pixels with each car_number label value
@@ -56,6 +74,9 @@ def draw_labeled_bboxes(img, labels):
     return img
 
 def annotate_image(clf, img, prev_heats=[], threshold=3, return_heat=False):
+    """
+    The core function to extract features annotate the image.
+    """
     found_matches = []
     sizes = [64,96,128,192]
     for s in sizes:
@@ -88,6 +109,11 @@ def annotate_image(clf, img, prev_heats=[], threshold=3, return_heat=False):
         return draw_img
 
 def annotate_video(src, dst, use_prev_n_heats=6, threshold=4):
+    """
+    Process a video and annotate each frame.
+    Averaging over multiple frames is used to smoothen the output
+    and remove false positives.
+    """
     clf = joblib.load('classifier.pkl')
     prev_heats = []
     def process_image(img):

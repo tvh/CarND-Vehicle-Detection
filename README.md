@@ -13,33 +13,48 @@ The goals / steps of this project are the following:
 
 #### 1. Explain how (and identify where in your code) you extracted HOG features from the training images.
 
+The features are extracted in the `prepare` function.
+I used `orientations=9`, `pixels_per_cell=16`, `cells_per_block=2` and all the channels of the YUV colorspace.
+
 #### 2. Explain how you settled on your final choice of HOG parameters.
 
+I tried different colorspaces (RGB, HLS, YUV) and YUV gave me the best results.
+beyond 9 orientations I wasn't getting any more accuracy from the classifier.
+
 #### 3. Describe how (and identify where in your code) you trained a classifier using your selected HOG features (and color features if you used them).
+
+I used a `GradientBoostingClassifier` for this project. With this I was able to get 98.5% accuracy for the validation set. 
+With a `LinearSVC` I was only able to get 96%.
+The code for this, along with some data exploration, is in [Classifier.ipynb](./Classifier.ipynb).
 
 ### Sliding Window Search
 
 #### 1. Describe how (and identify where in your code) you implemented a sliding window search.  How did you decide what scales to search and how much to overlap windows?
 
-#### 2. Show some examples of test images to demonstrate how your pipeline is working.  What did you do to optimize the performance of your classifier?
+To find cars in the image, I exhausively search the lower half of each image.
+I do this for 1x, 1.5x, 2x and 3x scaling.
+The scales I used were just scales that would work well when resizing the image and seemed to work okay.
+3x gets to about the maximum size of any car in the video so I stopped there.
+
+The search pattern has a 75% overlap in both x and y direction.
+I tried using less of an overlap, but wasn't getting a good result from it.
+
+#### 2. Show some examples of test images to demonstrate how your pipeline is working. What did you do to optimize the performance of your classifier?
+
+Before tackling the video I tested my pipeline on the provided test images.
+The results are saved to `output_images`.
+
+TODO
 
 ### Video Implementation
 
-#### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (somewhat wobbly or unstable bounding boxes are ok as long as you are identifying the vehicles most of the time with minimal false positives.)
-Here's a [link to my video result](./project_video.mp4)
+#### 1. Provide a link to your final video output.
+Here's a [link to my video result](./project_out.mp4)
 
 #### 2. Describe how (and identify where in your code) you implemented some kind of filter for false positives and some method for combining overlapping bounding boxes.
 
-### Here are six frames and their corresponding heatmaps:
-
-![alt text][image5]
-
-### Here is the output of `scipy.ndimage.measurements.label()` on the integrated heatmap from all six frames:
-![alt text][image6]
-
-### Here the resulting bounding boxes are drawn onto the last frame in the series:
-![alt text][image7]
+TODO
 
 ### Discussion
 
-#### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
+TODO
